@@ -17,6 +17,7 @@ using namespace std;
 TODO: (top is easiest, bottom is hardest.)
 - Update all opcodes to update the flags
 - Implement the remaining machine operations
+- Create a helper function for handling RAM, Register, and Immediate values, both writing and reading.
 - Implement RAM addressing via '@'
 - Update RAM so each address is 1 byte
 - Update opcodes to support the 1 byte limit
