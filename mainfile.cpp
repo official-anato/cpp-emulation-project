@@ -17,11 +17,13 @@ using namespace std;
 TODO: (top is easiest, bottom is hardest.)
 - Update all opcodes to update the flags
 - Implement the remaining machine operations
+- Implement RAM addressing via '@'
 - Update RAM so each address is 1 byte
 - Update opcodes to support the 1 byte limit
 - Implement try/catch handling for errors
 - Write an assembler for binary opcode
 - Switch to a binary opcode system rather than keywords
+- Instead of if...else if statements, use a switch statement
 - Get SDL2 support working
 
 -- DOCS --
@@ -87,7 +89,7 @@ class Cpu{
     
     uint32_t _imm_or_reg(const string& input){
       if (input[0] == 'R'){return stoi(input.substr(1));}
-      else {return stoi(input);}
+      else {return (uint32_t)stoi(input);}
     }
     
     void add(const string& x, const string& y, const string& result){
@@ -98,57 +100,57 @@ class Cpu{
       reg[res] = a+b;
     }
     
-    void sub(string x, string y, string result){
+    void sub(const string& x, const string& y, const string& result){
       int a = _get_val(x);
       int b = _get_val(y);
       int res = _imm_or_reg(result);
       reg[res] = a-b;
     }
     
-    void mul(string x, string y, string result){
+    void mul(const string& x, const string& y, const string& result){
       int a = _get_val(x);
       int b = _get_val(y);
       int res = _imm_or_reg(result);
       reg[res] = a*b;
     }
     
-    void div(string x, string y, string result){
+    void div(const string& x, const string& y, const string& result){
       int a = _get_val(x);
       int b = _get_val(y);
       int res = _imm_or_reg(result);
       reg[res] = a/b;
     }
     
-    void mod(string x, string y, string result){
+    void mod(const string& x, const string& y, const string& result){
       int a = _get_val(x);
       int b = _get_val(y);
       int res = _imm_or_reg(result);
       reg[res] = a%b;
     }
     
-    void jmp(string dest){
+    void jmp(const string& dest){
       PC = _get_val(dest)-1;
     }
     
-    void jeq(string dest){
+    void jeq(const string& dest){
       if (Zero == true){
         PC = _get_val(dest)-1;
       }
     }
     
-    void jlt(string dest){
+    void jlt(const string& dest){
       if (Sign == true){
         PC = _get_val(dest)-1;
       }
     }
     
-    void jgt(string dest){
+    void jgt(const string& dest){
       if (Sign == false && Zero == false){
         PC = _get_val(dest)-1;
       }
     }
     
-    void cmp(string x, string y){
+    void cmp(const string& x, const string& y){
       int a = _get_val(x);
       int b = _get_val(y);
       int result = a-b;
@@ -308,7 +310,7 @@ int main(){
   // vector<string> PRG = {"ens","add 1, 1, 0","read 0 'register'","sub 1, 1, 1","read 1 'register'","mul 2, 2, 2","read 2 'register'","div 2, 2, 3","read 3 'register'","hlt"}; // 2 0 4 1 - my first ever program to work.
   // vector<string> PRG = {"ens", "gdi 0", "read 0, 'ram'", "jmp 1", "hlt"}; // First program written with GDI support, and branching!
   // vector<string> PRG = {"ens", "gdi R0", "gdi R1", "add R0, R1, R2", "read 2, 'register'", "jmp 1", "hlt"}; // First program with add and gdi interacting.
-  vector<string> PRG = {"ens", "read 0, 'register'", "mov 50, R0", "read 0, 'register'", "hlt"}; // First program to use MOV after it was implemented
+  // vector<string> PRG = {"ens", "read 0, 'register'", "mov 50, R0", "read 0, 'register'", "hlt"}; // First program to use MOV after it was implemented
   computer.run(PRG);
   return 0;
 }
