@@ -14,9 +14,11 @@ Written by Anato.
 #include <sstream>
 using namespace std;
 /*
-TODO: (top is highest priority, bottom is lowest.)
+TODO: (top is easiest, bottom is hardest.)
 - Update all opcodes to update the flags
 - Implement the remaining machine operations
+- Update RAM so each address is 1 byte
+- Update opcodes to support the 1 byte limit
 - Implement try/catch handling for errors
 - Write an assembler for binary opcode
 - Switch to a binary opcode system rather than keywords
@@ -42,12 +44,13 @@ Jgt R1 : R1 = destination
 Cmp R1, R2 : R1 = X, R2 = Y
 
 * Machine control *
-Gdi R1 : R1 = address. Takes user input, places them in R1.
+Gdi R1 : R1 = register/ram address. Takes user input, places them in R1.
 Sdl : enables SDL2 system. (Note: REFER TO RAM LOCATIONS FOR CONFIGS.)
 Ens : Enables output to a save file.
 Hlt : Halts the CPU.
 Mmc R1, R2 : R1 = address, R2 = value. Modifies RAM directly.
 Read R1 : R1 = address
+Mov R1, R2 : R1 = Value, R2 = target (ram address or register address)
 
 * Registers and flags *
 - Flags -
@@ -60,7 +63,7 @@ R0 to R31 are available for usage. This totals up to 32 registers, BUT NOTE THAT
 
 RAM Locations:
 * SDL2 *
-
+SDL2 has it's own dedicated section of RAM initialized, called VRAM. VRAM has 518,000 addresses available, 720x720. 1 pixel per address.
 */
 
 class Cpu{
@@ -218,7 +221,22 @@ class Cpu{
       int res = _imm_or_reg(addr);
       if (mode == "'register'"){cout << reg[res] << endl;}
       else{cout << RAM[res] << endl;}
+    }
+    
+    void mov(string value, string value2){
+      int val = _get_val(value);
+      if (value2[0] == 'R' || value[0] == 'r'){
+        reg[stoi(value2.substr(1))] = val;
+      }
       
+      else if(value2[0] == '@'){
+        RAM[stoi(value2.substr(1))] = val;
+      }
+      
+      else{
+        cout << "Invalid value: not register or RAM address. (Received immediate value for second parameter.)" << endl;
+        halt();
+      }
     }
     
     void run(const vector<string>& PRG){
@@ -278,6 +296,7 @@ class Cpu{
         else if (inst == "hlt"){halt();running = false;}
         else if (inst == "mmc"){mmc(data.at(0),data.at(1));}
         else if (inst == "read"){read(data.at(0),data.at(1));}
+        else if (inst == "mov"){mov(data.at(0),data.at(1));}
         else {cout << "Invalid opcode!";}
       }
       
@@ -288,7 +307,8 @@ int main(){
   Cpu computer;
   // vector<string> PRG = {"ens","add 1, 1, 0","read 0 'register'","sub 1, 1, 1","read 1 'register'","mul 2, 2, 2","read 2 'register'","div 2, 2, 3","read 3 'register'","hlt"}; // 2 0 4 1 - my first ever program to work.
   // vector<string> PRG = {"ens", "gdi 0", "read 0, 'ram'", "jmp 1", "hlt"}; // First program written with GDI support, and branching!
-  vector<string> PRG = {"ens", "gdi R0", "gdi R1", "add R0, R1, R2", "read 2, 'register'", "jmp 1", "hlt"}; // First program with add and gdi interacting.
+  // vector<string> PRG = {"ens", "gdi R0", "gdi R1", "add R0, R1, R2", "read 2, 'register'", "jmp 1", "hlt"}; // First program with add and gdi interacting.
+  vector<string> PRG = {"ens", "read 0, 'register'", "mov 50, R0", "read 0, 'register'", "hlt"}; // First program to use MOV after it was implemented
   computer.run(PRG);
   return 0;
 }
