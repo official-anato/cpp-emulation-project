@@ -58,6 +58,7 @@ SDL2 has it's own dedicated section of RAM initialized, called VRAM. VRAM has 51
 ---
 
 TODO: (top is easiest, bottom is hardest.)
+- Remove `using namespace std;` after binary opcode transition.
 - Create a helper function for handling writing to registers (adding support for two digit register locations since current code only uses the first digit after 'r') ; This to-do is an add-on to the one below.
 - Create a helper function for handling RAM, Register, and Immediate values, both reading and writing.
 - Implement try/catch handling for errors.
