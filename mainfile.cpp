@@ -14,19 +14,6 @@ Written by Anato.
 #include <sstream>
 using namespace std;
 /*
-TODO: (top is easiest, bottom is hardest.)
-- Update all opcodes to update the flags
-- Implement the remaining machine operations
-- Create a helper function for handling RAM, Register, and Immediate values, both writing and reading.
-- Implement RAM addressing via '@'
-- Update RAM so each address is 1 byte
-- Update opcodes to support the 1 byte limit
-- Implement try/catch handling for errors
-- Write an assembler for binary opcode
-- Switch to a binary opcode system rather than keywords
-- Instead of if...else if statements, use a switch statement
-- Get SDL2 support working
-
 -- DOCS --
 Instructions:
 + NOTE: All mentions of R(x) can be interchanged with immediate values as well.
@@ -67,6 +54,22 @@ R0 to R31 are available for usage. This totals up to 32 registers, BUT NOTE THAT
 RAM Locations:
 * SDL2 *
 SDL2 has it's own dedicated section of RAM initialized, called VRAM. VRAM has 518,000 addresses available, 720x720. 1 pixel per address.
+
+---
+
+TODO: (top is easiest, bottom is hardest.)
+- Create a helper function for handling writing to registers (adding support for two digit register locations since current code only uses the first digit after 'r') ; This to-do is an add-on to the one below.
+- Create a helper function for handling RAM, Register, and Immediate values, both reading and writing.
+- Implement try/catch handling for errors.
+- Implement RAM addressing via '@'.
+- Update RAM so each address is 1 byte.
+- Update opcodes to support the 1 byte limit
+- Make RAM be a uint8_t value instead of vector<string>.
+- Write an assembler for binary opcode.
+- Switch to a binary opcode system rather than keywords.
+- Add support for custom syscalls (e.g calling 'print'.)
+- Instead of if...else if statements, use a switch statement.
+- Get SDL2 support working.
 */
 
 class Cpu{
@@ -93,12 +96,21 @@ class Cpu{
       else {return (uint32_t)stoi(input);}
     }
     
+    void _flgupd(const int& result){
+      int res = result;
+      if (res < 0){Zero = false; Carry = false; Sign = true;}
+      else if (res > 0){Zero = false; Carry = (result > 2147483647LL) ? true : false; Sign = false;}
+      else if (res == 0){Zero = true; Carry = false; Sign = false;}
+    }
+    
+    // Arithmetic
+    
     void add(const string& x, const string& y, const string& result){
       int a = _get_val(x);
       int b = _get_val(y);
-      
       int res = _imm_or_reg(result);
       reg[res] = a+b;
+      _flgupd(reg[res]);
     }
     
     void sub(const string& x, const string& y, const string& result){
@@ -106,6 +118,7 @@ class Cpu{
       int b = _get_val(y);
       int res = _imm_or_reg(result);
       reg[res] = a-b;
+      _flgupd(reg[res]);
     }
     
     void mul(const string& x, const string& y, const string& result){
@@ -113,6 +126,7 @@ class Cpu{
       int b = _get_val(y);
       int res = _imm_or_reg(result);
       reg[res] = a*b;
+      _flgupd(reg[res]);
     }
     
     void div(const string& x, const string& y, const string& result){
@@ -120,6 +134,7 @@ class Cpu{
       int b = _get_val(y);
       int res = _imm_or_reg(result);
       reg[res] = a/b;
+      _flgupd(reg[res]);
     }
     
     void mod(const string& x, const string& y, const string& result){
@@ -127,8 +142,10 @@ class Cpu{
       int b = _get_val(y);
       int res = _imm_or_reg(result);
       reg[res] = a%b;
+      _flgupd(reg[res]);
     }
     
+    // Branching
     void jmp(const string& dest){
       PC = _get_val(dest)-1;
     }
@@ -151,17 +168,16 @@ class Cpu{
       }
     }
     
+    // Comparison
     void cmp(const string& x, const string& y){
       int a = _get_val(x);
       int b = _get_val(y);
       int result = a-b;
-
-      if (result < 0){Zero = false; Carry = false; Sign = true;}
-      else if (result > 0){Zero = false; Carry = (result > 2147483647LL) ? true : false; Sign = false;}
-      else if (result == 0){Zero = true; Carry = false; Sign = false;}
-      
+      _flgupd(result);
     }
     
+    
+   // Machine instructions
     void gdi(const string& dest){
       string userin = "";
       getline(cin, userin);
@@ -190,11 +206,11 @@ class Cpu{
           file  << "RAM (0 - 65535): [";
           
           // Iterate through items in RAM and append them one by one.
-          for (const auto& str : RAM){file << str << ",";}
+          for (const auto& str : RAM){file << str << ", ";}
           file << "]\nPC: " << PC << "\nRegisters (R0 - R31): [";
           
           // Do the same for registers as well
-          for (const auto& str : reg){file << str << ",";}
+          for (const auto& str : reg){file << str << ", ";}
           file << "]";
           file.close();
         }
@@ -270,7 +286,8 @@ class Cpu{
         for (size_t i = 1; i < decomp_inst.size(); i++){data.push_back(decomp_inst.at(i));}
         PC++;
         
-        // P.S If anyone ever suggests I use a dispatch table. I will bash their heads in :3
+        // P.S If anyone ever suggests I use a dispatch table.
+        // I will bash their heads in :3
         // I have TRIED to use one.
         // It was how I implemented
         // it in python (a key-value dispatch table).
@@ -312,6 +329,7 @@ int main(){
   // vector<string> PRG = {"ens", "gdi 0", "read 0, 'ram'", "jmp 1", "hlt"}; // First program written with GDI support, and branching!
   // vector<string> PRG = {"ens", "gdi R0", "gdi R1", "add R0, R1, R2", "read 2, 'register'", "jmp 1", "hlt"}; // First program with add and gdi interacting.
   // vector<string> PRG = {"ens", "read 0, 'register'", "mov 50, R0", "read 0, 'register'", "hlt"}; // First program to use MOV after it was implemented
+  vector<string> PRG = {"ens", "mov 5, R0", "mov 5, R1", "cmp R0, R1", "read 0, 'register'", "read 1, ''register", "hlt"};
   computer.run(PRG);
   return 0;
 }
