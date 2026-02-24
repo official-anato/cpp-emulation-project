@@ -59,7 +59,7 @@ SDL2 has it's own dedicated section of RAM initialized, called VRAM. VRAM has 51
 
 TODO: (top is easiest, bottom is hardest.)
 - Remove `using namespace std;` after binary opcode transition.
-- Create a helper function for handling writing to registers (adding support for two digit register locations since current code only uses the first digit after 'r') ; This to-do is an add-on to the one below.
+- Add support for two digit register locations ; This to-do is an add-on to the one below.
 - Create a helper function for handling RAM, Register, and Immediate values, both reading and writing.
 - Implement try/catch handling for errors.
 - Implement RAM addressing via '@'.
@@ -81,6 +81,7 @@ class Cpu{
     int PC = 0;
     uint32_t reg[32] = {0};
     vector<string> RAM{65536, "0"};
+    
   public:
     // Making the save data variables public to make them adjustable outside of this class.
     bool save_output = false;
@@ -93,8 +94,12 @@ class Cpu{
     }
     
     uint32_t _imm_or_reg(const string& input){
-      if (input[0] == 'R'){return stoi(input.substr(1));}
+      if (input[0] == 'R' || input[0] == '@'){return stoi(input.substr(1));}
       else {return (uint32_t)stoi(input);}
+    }
+    
+    uint32_t _modreg(const int& value, const int& location){
+      reg[location] = value;
     }
     
     void _flgupd(const int& result){
@@ -110,7 +115,7 @@ class Cpu{
       int a = _get_val(x);
       int b = _get_val(y);
       int res = _imm_or_reg(result);
-      reg[res] = a+b;
+      _modreg(a+b, res);
       _flgupd(reg[res]);
     }
     
@@ -118,7 +123,7 @@ class Cpu{
       int a = _get_val(x);
       int b = _get_val(y);
       int res = _imm_or_reg(result);
-      reg[res] = a-b;
+      _modreg(a-b, res);
       _flgupd(reg[res]);
     }
     
@@ -126,7 +131,7 @@ class Cpu{
       int a = _get_val(x);
       int b = _get_val(y);
       int res = _imm_or_reg(result);
-      reg[res] = a*b;
+      _modreg(a*b, res);
       _flgupd(reg[res]);
     }
     
@@ -134,7 +139,7 @@ class Cpu{
       int a = _get_val(x);
       int b = _get_val(y);
       int res = _imm_or_reg(result);
-      reg[res] = a/b;
+      _modreg(a/b, res);
       _flgupd(reg[res]);
     }
     
@@ -142,7 +147,7 @@ class Cpu{
       int a = _get_val(x);
       int b = _get_val(y);
       int res = _imm_or_reg(result);
-      reg[res] = a%b;
+      _modreg(a%b, res);
       _flgupd(reg[res]);
     }
     
@@ -185,7 +190,7 @@ class Cpu{
       if (dest[0] == 'R' || dest[0] == 'r'){
         int index = stoi(dest.substr(1));
         uint32_t val = (uint32_t)stoi(userin);
-        reg[index] = val;
+        _modreg(val, index);
       }
       
       else{
@@ -246,11 +251,11 @@ class Cpu{
     void mov(string value, string value2){
       int val = _get_val(value);
       if (value2[0] == 'R' || value[0] == 'r'){
-        reg[stoi(value2.substr(1))] = val;
+        _modreg(val, _imm_or_reg(value2));
       }
       
       else if(value2[0] == '@'){
-        RAM[stoi(value2.substr(1))] = val;
+        RAM[_imm_or_reg(value2)] = val;
       }
       
       else{
@@ -326,11 +331,10 @@ class Cpu{
 
 int main(){
   Cpu computer;
-  // vector<string> PRG = {"ens","add 1, 1, 0","read 0 'register'","sub 1, 1, 1","read 1 'register'","mul 2, 2, 2","read 2 'register'","div 2, 2, 3","read 3 'register'","hlt"}; // 2 0 4 1 - my first ever program to work.
+  vector<string> PRG = {"ens","add 1, 1, 0","read 0 'register'","sub 1, 1, 1","read 1 'register'","mul 2, 2, 2","read 2 'register'","div 2, 2, 3","read 3 'register'","hlt"}; // 2 0 4 1 - my first ever program to work.
   // vector<string> PRG = {"ens", "gdi 0", "read 0, 'ram'", "jmp 1", "hlt"}; // First program written with GDI support, and branching!
   // vector<string> PRG = {"ens", "gdi R0", "gdi R1", "add R0, R1, R2", "read 2, 'register'", "jmp 1", "hlt"}; // First program with add and gdi interacting.
   // vector<string> PRG = {"ens", "read 0, 'register'", "mov 50, R0", "read 0, 'register'", "hlt"}; // First program to use MOV after it was implemented
-  vector<string> PRG = {"ens", "mov 5, R0", "mov 5, R1", "cmp R0, R1", "read 0, 'register'", "read 1, ''register", "hlt"};
   computer.run(PRG);
   return 0;
 }
